@@ -1,6 +1,6 @@
-// CONFIGURACIÓN FIREBASE (Usa tus datos reales aquí)
+// --- CONFIGURACIÓN FIREBASE ---
 const firebaseConfig = {
-    apiKey: "TU_API_KEY_DE_FIREBASE",
+    apiKey: "TU_API_KEY", // Obtenla de tu consola Firebase
     authDomain: "ztchy-pro-9eaf8.firebaseapp.com",
     projectId: "ztchy-pro-9eaf8",
     storageBucket: "ztchy-pro-9eaf8.appspot.com",
@@ -12,38 +12,26 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Función de Login
-function login() {
-    const email = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
+// --- FUNCIÓN DE REGISTRO CON SALDO INICIAL ---
+async function registerUser() {
+    const email = document.getElementById('reg-email').value;
+    const pass = document.getElementById('reg-password').value;
 
-    auth.signInWithEmailAndPassword(email, pass)
-        .then((userCredential) => {
-            loadDashboard(userCredential.user);
-        })
-        .catch((error) => alert("Error: " + error.message));
-}
+    try {
+        // 1. Crear el usuario en Firebase Auth
+        const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+        const user = userCredential.user;
 
-// Cargar Panel y Saldo
-function loadDashboard(user) {
-    document.getElementById('auth-wall').style.display = 'none';
-    document.getElementById('main-panel').style.display = 'block';
-    document.getElementById('user-info').innerText = "Usuario: " + user.email;
+        // 2. Crear el documento en Firestore con 10 créditos
+        await db.collection("usuarios").doc(user.uid).set({
+            email: user.email,
+            saldo: 10,
+            fecha_registro: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-    db.collection("usuarios").doc(user.uid).get().then((doc) => {
-        if (doc.exists) {
-            document.getElementById('balance').innerText = doc.data().saldo;
-        } else {
-            // Si el usuario es nuevo, le creamos sus 10 créditos
-            db.collection("usuarios").doc(user.uid).set({
-                email: user.email,
-                saldo: 10
-            });
-            document.getElementById('balance').innerText = "10";
-        }
-    });
-}
-
-function logout() {
-    auth.signOut().then(() => location.reload());
+        alert("¡Cuenta creada con 10 créditos de regalo!");
+        location.reload(); // Recargar para ir al login
+    } catch (error) {
+        alert("Error al registrar: " + error.message);
+    }
 }
